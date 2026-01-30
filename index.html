@@ -538,4 +538,76 @@
         // Display results function
         function displayResults(matches) {
             const resultsContainer = document.getElementById('results');
-            const jsonOutput = document.getElementById('json
+            const jsonOutput = document.getElementById('jsonOutput');
+            
+            if (matches.length === 0) {
+                resultsContainer.innerHTML = '<p class="no-results">No yesterday matches found or parsing error occurred</p>';
+                jsonOutput.textContent = '[]';
+                return;
+            }
+            
+            // Display formatted results
+            resultsContainer.innerHTML = '';
+            matches.forEach(match => {
+                const matchEl = document.createElement('div');
+                matchEl.className = 'match';
+                
+                // Determine status class - yesterday matches are always finished
+                let statusClass = 'finished';
+                let statusText = 'FINISHED';
+                
+                // Determine tip class based on result
+                let tipClass = '';
+                if (match.result === 'win' || match.result.toLowerCase().includes('win')) {
+                    tipClass = 'win';
+                } else if (match.result === 'loss' || match.result.toLowerCase().includes('loss')) {
+                    tipClass = 'loss';
+                } else {
+                    tipClass = 'ongoing'; // for pending or unknown results
+                }
+                
+                // Prepare display values
+                const score1 = match.scoreteam1 || '-';
+                const score2 = match.scoreteam2 || '-';
+                const time = match.time || '';
+                const league = match.league || 'Unknown League';
+                const tip = match.tip || 'No prediction';
+                const odds = match.odd || 'N/A';
+                
+                matchEl.innerHTML = `
+                    <div class="match-header">
+                        <span class="league">
+                            <img class="country-flag" src="${match.leagueflag}" alt="League flag" onerror="this.style.display='none'">
+                            ${league}
+                        </span>
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <span>${time}</span>
+                            <span class="status ${statusClass}">${statusText}</span>
+                        </div>
+                    </div>
+                    <div class="teams">
+                        <div class="team home">
+                            <img class="team-flag" src="${match.team1flag}" alt="${match.team1}" onerror="this.style.display='none'">
+                            <span>${match.team1}</span>
+                        </div>
+                        <div class="score">${score1} : ${score2}</div>
+                        <div class="team away">
+                            <img class="team-flag" src="${match.team2flag}" alt="${match.team2}" onerror="this.style.display='none'">
+                            <span>${match.team2}</span>
+                        </div>
+                    </div>
+                    <div class="prediction">
+                        <span class="tip ${tipClass}">${tip}</span>
+                        <span class="odds">Result: ${match.result || 'N/A'}</span>
+                    </div>
+                `;
+                
+                resultsContainer.appendChild(matchEl);
+            });
+            
+            // Display JSON output
+            jsonOutput.textContent = JSON.stringify(matches, null, 2);
+        }
+    </script>
+</body>
+</html>
