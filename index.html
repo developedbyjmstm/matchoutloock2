@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Football Match Parser - MatchOutlook Yesterday</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0A2625 0%, #103F3E 100%);
+            color: #fff;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        header {
+            text-align: center;
+            padding: 20px 0;
+            margin-bottom: 30px;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            color: #9A7701;
+        }
+        
+        .subtitle {
+            font-size: 1.2rem;
+            color: #B5C3C3;
+            margin-bottom: 20px;
+        }
+        
+        .output-section {
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        h2 {
+            font-size: 1.8rem;
+            margin-bottom: 20px;
+            color: #9A7701;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #9A7701;
+        }
+        
+        .results {
+            background: rgba(10, 38, 37, 0.7);
+            border-radius: 5px;
+            padding: 15px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        
+        .match {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-left: 4px solid #9A7701;
+        }
+        
+        .match-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+        
+        .league {
+            font-weight: bold;
+            color: #B5C3C3;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .country-flag {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+        
+        .status {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+        }
+        
+        .status.live {
+            background: #f40c27;
+        }
+        
+        .status.finished {
+            background: #34c759;
+        }
+        
+        .status.upcoming {
+            background: #9A7701;
+        }
+        
+        .teams {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+        
+        .team {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex: 1;
+        }
+        
+        .team.home {
+            justify-content: flex-start;
+        }
+        
+        .team.away {
+            justify-content: flex-end;
+            flex-direction: row-reverse;
+            text-align: right;
+        }
+        
+        .team-flag {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+        
+        .score {
+            font-weight: bold;
+            font-size: 1.2rem;
+            color: #9A7701;
+            margin: 0 15px;
+            min-width: 50px;
+            text-align: center;
+        }
+        
+        .prediction {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .tip {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        
+        .tip.win {
+            background: #34c759;
+            color: white;
+        }
+        
+        .tip.loss {
+            background: #f40c27;
+            color: white;
+        }
+        
+        .tip.ongoing {
+            background: #9A7701;
+            color: white;
+        }
+        
+        .odds {
+            color: #B5C3C3;
+            font-weight: bold;
+        }
+        
+        .json-output {
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 12px;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: 5px;
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 20px;
+        }
+        
+        .no-results {
+            text-align: center;
+            color: #B5C3C3;
+            font-style: italic;
+        }
+        
+        .loading {
+            text-align: center;
+            color: #B5C3C3;
+            font-style: italic;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>MatchOutlook Yesterday Parser</h1>
+            <div class="subtitle">Extracts yesterday's predictions and results from matchoutlook.com</div>
+        </header>
+        
+        <div class="output-section">
+            <h2>YESTERDAY'S MATCHES & RESULTS</h2>
+            <div class="results" id="results">
+                <p class="loading">Waiting for HTML content...</p>
+            </div>
+            <div class="json-output" id="jsonOutput">{}</div>
+        </div>
+    </div>
+
+    <script>
+        // Variable that will contain the HTML to parse
+        var htmlContentVariable = '';
+        
+        // Function to set HTML content from Android
+        function setHtmlContent(html) {
+            htmlContentVariable = html;
+            // Automatically parse the HTML when it's set
+            parseAndDisplayResults();
+        }
+        
+        // Function to parse HTML and display results
+        function parseAndDisplayResults() {
+            if (!htmlContentVariable) {
+                document.getElementById('results').innerHTML = '<p class="no-results">No HTML content provided</p>';
+                return;
+            }
+            
+            const results = parseMatchOutlookYesterday(htmlContentVariable);
+            displayResults(results);
+        }
+        
+        // MatchOutlook Yesterday Parser
+        function parseMatchOutlookYesterday(html) {
+            if (!html) return [];
+            
+            try {
+                const results = [];
+                let baseUrl = "https://www.matchoutlook.com/";
+                
+                // Extract base URL from HTML
+                const baseMatch = html.match(/<base\s+href="([^"]*)"/i);
+                if (baseMatch && baseMatch[1]) {
+                    baseUrl = baseMatch[1];
+                }
+                
+                // First try: Extract the yesterday section
+                const yesterdaySectionPattern = /<div[^>]*id="yesterday-div"[^>]*>([\s\S]*?)<\/div>\s*<div[^>]*id="today-div"/i;
+                const sectionMatch = html.match(yesterdaySectionPattern);
+                
+                if (sectionMatch) {
+                    const sectionContent = sectionMatch[1];
+                    
+                    // Extract all match sections
+                    const matchPattern = /<div class="match-section border-radius">([\s\S]*?)(?=<div class="match-section border-radius"|<\/div>\s*<\/div>)/gi;
+                    let matchMatch;
+                    
+                    while ((matchMatch = matchPattern.exec(sectionContent)) !== null) {
+                        const matchHtml = matchMatch[1].trim();
+                        if (matchHtml) {
+                            const matchData = parseMatchOutlookSection(matchHtml, baseUrl, true);
+                            if (matchData && matchData.team1 && matchData.team2) {
+                                results.push(matchData);
+                            }
+                        }
+                    }
+                } else {
+                    // Second try: Aggressive approach - look for all yesterday matches in the entire HTML
+                    console.log("Using aggressive approach for yesterday matches");
+                    results.push(...parseMatchOutlookAggressive(html, baseUrl));
+                }
+                
+                return results;
+                
+            } catch (e) {
+                console.error("Error parsing MatchOutlook yesterday:", e);
+                return [];
+            }
+        }
+        
+        // Aggressive parsing for yesterday matches
+        function parseMatchOutlookAggressive(html, baseUrl) {
+            const results = [];
+            
+            try {
+                // Look for all match sections in the entire HTML that have "Result:" and green check
+                const matchPattern = /<div class="match-section border-radius">([\s\S]*?)<div class="analysis-div">/gi;
+                let matchMatch;
+                
+                while ((matchMatch = matchPattern.exec(html)) !== null) {
+                    const matchHtml = matchMatch[1];
+                    
+                    // Check if this is a yesterday match by looking for "Result:" text
+                    if (matchHtml.includes("Result:")) {
+                        // Also check if it has the green check icon
+                        const endPos = matchMatch.index + matchMatch[0].length;
+                        const followingText = html.substring(endPos, Math.min(html.length(), endPos + 200));
+                        
+                        if (followingText.includes("fa-check-circle green-result")) {
+                            const fullMatchHtml = matchHtml + "<div class=\"analysis-div\">";
+                            const matchData = parseMatchOutlookSection(fullMatchHtml, baseUrl, true);
+                            if (matchData && matchData.team1 && matchData.team2) {
+                                results.push(matchData);
+                            }
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error("Error in aggressive parsing:", e);
+            }
+            
+            return results;
+        }
+        
+        // Parse individual match section from MatchOutlook
+        function parseMatchOutlookSection(matchHtml, baseUrl, isYesterday) {
+            try {
+                const obj = {
+                    league: "",
+                    leagueflag: "https://primatips.com/images/tournament/default.png",
+                    team1: "",
+                    team2: "",
+                    team1flag: "",
+                    team2flag: "",
+                    date: "",
+                    time: "",
+                    scoreteam1: "",
+                    scoreteam2: "",
+                    tip: "",
+                    odd: "",
+                    result: "pending",
+                    status: "FINISHED"  // Yesterday matches are always finished
+                };
+                
+                // Extract league and time from match-title
+                const titlePattern = /<div class="match-title">(.*?)<b class="float-right">(.*?)<\/b>/is;
+                const titleMatch = matchHtml.match(titlePattern);
+                
+                if (titleMatch) {
+                    let leagueText = titleMatch[1].trim();
+                    const time = titleMatch[2].trim();
+                    
+                    // Clean league text - remove HTML tags
+                    leagueText = leagueText.replace(/<[^>]*>/g, "").trim();
+                    obj.league = leagueText;
+                    obj.time = time;
+                } else {
+                    // Try alternative pattern
+                    const altPattern = /<div class="match-title">([^<]+)<\/div>/i;
+                    const altMatch = matchHtml.match(altPattern);
+                    if (altMatch) {
+                        const titleText = altMatch[1].trim();
+                        const timePattern = /(.*?)\s+(\d{1,2}:\d{2})$/;
+                        const timeMatch = titleText.match(timePattern);
+                        
+                        if (timeMatch) {
+                            obj.league = timeMatch[1].trim();
+                            obj.time = timeMatch[2].trim();
+                        } else {
+                            obj.league = titleText;
+                            obj.time = "";
+                        }
+                    }
+                }
+                
+                // Extract team flags
+                const teamFlags = [];
+                
+                // Look for team flag images
+                const flagPattern = /<img\s+[^>]*src\s*=\s*['"]([^'"]*images\/teams\/[^'"]*)['"][^>]*>/gi;
+                let flagMatch;
+                
+                while ((flagMatch = flagPattern.exec(matchHtml)) !== null) {
+                    let flagUrl = flagMatch[1].trim();
+                    if (flagUrl && !flagUrl.includes("default")) {
+                        if (!flagUrl.startsWith("http")) {
+                            flagUrl = baseUrl + (flagUrl.startsWith("/") ? flagUrl.substring(1) : flagUrl);
+                        }
+                        teamFlags.push(flagUrl);
+                    }
+                }
+                
+                // If no flags found with specific pattern, try more general pattern
+                if (teamFlags.length === 0) {
+                    const generalFlagPattern = /<img[^>]*src\s*=\s*['"]([^'"]*\.(?:png|jpg|jpeg|gif))['"][^>]*>/gi;
+                    let generalFlagMatch;
+                    const allImages = [];
+                    
+                    while ((generalFlagMatch = generalFlagPattern.exec(matchHtml)) !== null) {
+                        let imgUrl = generalFlagMatch[1].trim();
+                        if (imgUrl && !imgUrl.includes("banners") && !imgUrl.includes("logos")) {
+                            if (!imgUrl.startsWith("http")) {
+                                imgUrl = baseUrl + (imgUrl.startsWith("/") ? imgUrl.substring(1) : imgUrl);
+                            }
+                            allImages.push(imgUrl);
+                        }
+                    }
+                    
+                    // Usually the first two images are team flags
+                    if (allImages.length >= 2) {
+                        teamFlags.push(allImages[0]);
+                        teamFlags.push(allImages[1]);
+                    }
+                }
+                
+                // Extract team names
+                const teamNames = [];
+                
+                // Look for team names in bold tags around "vs"
+                const teamPattern = /<b>([^<]+)<\/b>\s*<b[^>]*>vs<\/b>\s*<b>([^<]+)<\/b>/i;
+                const teamMatch = matchHtml.match(teamPattern);
+                
+                if (teamMatch) {
+                    teamNames.push(teamMatch[1].trim());
+                    teamNames.push(teamMatch[2].trim());
+                } else {
+                    // Fallback: extract all bold text that looks like team names
+                    const boldPattern = /<b>([^<]+)<\/b>/gi;
+                    const allBoldText = [];
+                    let boldMatch;
+                    
+                    while ((boldMatch = boldPattern.exec(matchHtml)) !== null) {
+                        const text = boldMatch[1].trim();
+                        // Filter out non-team text
+                        if (!text.toLowerCase().includes("vs") && 
+                            !text.toLowerCase().includes("result:") && 
+                            !text.toLowerCase().includes("best bet:") &&
+                            !text.match(/^\d+-\d+$/) &&
+                            !text.toLowerCase().match(/^\s*(home|away|draw|win)\s*$/)) {
+                            allBoldText.push(text);
+                        }
+                    }
+                    
+                    // Typically the first two bold texts are team names
+                    if (allBoldText.length >= 2) {
+                        teamNames.push(allBoldText[0]);
+                        teamNames.push(allBoldText[1]);
+                    }
+                }
+                
+                // Add teams to object
+                if (teamNames.length >= 2) {
+                    obj.team1 = teamNames[0];
+                    obj.team2 = teamNames[1];
+                    
+                    // Add team flags if available
+                    if (teamFlags.length >= 2) {
+                        obj.team1flag = teamFlags[0];
+                        obj.team2flag = teamFlags[1];
+                    } else if (teamFlags.length === 1) {
+                        obj.team1flag = teamFlags[0];
+                        obj.team2flag = "";
+                    }
+                }
+                
+                // Extract tip/prediction
+                const tipPattern = /Best Bet:\s*<b[^>]*>([^<]+)<\/b>/i;
+                const tipMatch = matchHtml.match(tipPattern);
+                
+                if (tipMatch) {
+                    obj.tip = tipMatch[1].trim();
+                } else {
+                    // Try analysis text
+                    const analysisPattern = /<div class="analysis-div">([^<]+)/i;
+                    const analysisMatch = matchHtml.match(analysisPattern);
+                    if (analysisMatch) {
+                        const analysis = analysisMatch[1].trim();
+                        // Extract the prediction from analysis text
+                        if (analysis.toLowerCase().includes("more than one goal")) {
+                            obj.tip = "Over 1.5";
+                        } else if (analysis.toLowerCase().includes("home team to win")) {
+                            obj.tip = "Home win";
+                        } else if (analysis.toLowerCase().includes("less than four goals")) {
+                            obj.tip = "Under 3.5";
+                        } else {
+                            obj.tip = analysis;
+                        }
+                    }
+                }
+                
+                // Extract result (for yesterday matches)
+                if (isYesterday) {
+                    const resultPattern = /Result:\s*<b>([^<]+)<\/b>/i;
+                    const resultMatch = matchHtml.match(resultPattern);
+                    
+                    if (resultMatch) {
+                        const resultText = resultMatch[1].trim();
+                        obj.result = resultText;
+                        
+                        // Try to extract scores from result
+                        const scoreMatch = resultText.match(/(\d+)[-:](\d+)/);
+                        if (scoreMatch) {
+                            obj.scoreteam1 = scoreMatch[1];
+                            obj.scoreteam2 = scoreMatch[2];
+                        } else {
+                            obj.scoreteam1 = "-";
+                            obj.scoreteam2 = "-";
+                        }
+                        
+                        // Check for win/loss icons
+                        if (matchHtml.includes("fa-check-circle green-result")) {
+                            obj.result = "win";
+                        } else if (matchHtml.includes("fa-times-circle red-result")) {
+                            obj.result = "loss";
+                        }
+                    }
+                }
+                
+                return obj;
+                
+            } catch (e) {
+                console.error("Error parsing match section:", e);
+                return null;
+            }
+        }
+        
+        // Display results function
+        function displayResults(matches) {
+            const resultsContainer = document.getElementById('results');
+            const jsonOutput = document.getElementById('json
